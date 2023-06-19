@@ -13,8 +13,8 @@
 // support pgx v5, making it useless to me.
 //
 // Ergo, idea: do a Very Simple Stupid Mock that only does what I need.
-// (Also a good excuse to learn mocking vs interface based testing.)
-// Ah but in order to do that, I need to make Pool an interface... fuck.
+// (Also a good excuse to learn mocking vs backendace based testing.)
+// Ah but in order to do that, I need to make Pool an backendace... fuck.
 // (OK maybe worth it if I can make all my calls go to the Pool.)
 
 package pgclient_test
@@ -24,7 +24,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/biztos/jsobs/interf"
+	"github.com/biztos/jsobs/backend"
 	"github.com/biztos/jsobs/pgclient"
 )
 
@@ -240,7 +240,7 @@ func (suite *PgClientTestSuite) TestListDetailEmptyOK() {
 	require := suite.Require()
 	detailers, err := suite.Client.ListDetail("/")
 	require.NoError(err)
-	require.EqualValues([]interf.Detailer{}, detailers, "empty list")
+	require.EqualValues([]backend.Detailer{}, detailers, "empty list")
 }
 
 func (suite *PgClientTestSuite) TestListDetailsOK() {
@@ -348,46 +348,22 @@ func (suite *PgClientTestSuite) TestPurgeOK() {
 
 }
 
-func (suite *PgClientTestSuite) TestPurgeOnlyOnceOK() {
-
-	require := suite.Require()
-
-	// This is rank hackery here... because in a Very Fast System it might
-	// still fail! Gonna need the mock...
-	past := time.Now().Add(-1 * time.Hour)
-	suite.SaveSet(100, "/keep/a/%02d.json", &past)
-	go suite.Client.Purge()
-	time.Sleep(time.Microsecond)   // annoying but necessary!
-	_, err := suite.Client.Purge() // other one still purging!
-	require.ErrorContains(err, "already purging")
-
-}
-
 func (suite *PgClientTestSuite) TestShutdownOK() {
 
 	require := suite.Require()
 
-	// Assumptions:
-	// 1) a purge that deletes stuff is slower than a purge that doesn't.
-	// 2) ...by enough that it's still working in the goroutine when we call
-	//    Shutdown.
-	require.True(suite.Client.PurgeOnShutdown, "PurgeOnShutdown") // by default
-	start := time.Now()
-	suite.Client.Shutdown()
-	shorter_time := time.Since(start)
-
-	// Now give it something to delete, and don't call an extra shutdown.
-	suite.Client.PurgeOnShutdown = false
 	past := time.Now().Add(-1 * time.Hour)
 	suite.SaveSet(50, "/purge/%02d.json", &past)
-	start = time.Now()
-	go suite.Client.Purge()
-	time.Sleep(time.Microsecond) // annoying but necessary!
-	require.True(suite.Client.Purging(), "Purging")
-	suite.Client.Shutdown()
-	longer_time := time.Since(start)
-	require.Equal(0, suite.FullCount(), "full count")
+	require.Equal(50, suite.FullCount(), "full count pre shutdown")
 
-	require.Greater(longer_time, shorter_time, "real purge longer")
+	suite.Client.PurgeOnShutdown = false
+	defer func() { suite.Client.PurgeOnShutdown = true }()
+
+	require.NoError(suite.Client.Shutdown(), "shutdown without purge")
+	require.Equal(50, suite.FullCount(), "full count after no-purge shutdown")
+
+	suite.Client.PurgeOnShutdown = true
+	require.NoError(suite.Client.Shutdown(), "shutdown without purge")
+	require.Equal(0, suite.FullCount(), "full count after purging shutdown")
 
 }

@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/biztos/jsobs/interf"
+	"github.com/biztos/jsobs/backend"
 	"github.com/biztos/jsobs/pgclient"
 )
 
@@ -25,12 +25,12 @@ var ExitFunc = os.Exit
 
 // Client handles save, load, list and delete operations for its Backend.
 type Client struct {
-	Backend interf.BackendClient
+	Backend backend.BackendClient
 }
 
 // New returns a client with the provided backend.  Any error returned from
 // the backend creation function is returned here.
-func New(bc interf.BackendClient, err error) (*Client, error) {
+func New(bc backend.BackendClient, err error) (*Client, error) {
 	return &Client{Backend: bc}, err
 }
 
@@ -99,7 +99,7 @@ func (c *Client) LoadRaw(path string) ([]byte, error) {
 
 // LoadDetail retrieves the object at path and returns its details, but not
 // the actual data.
-func (c *Client) LoadDetail(path string) (interf.Detailer, error) {
+func (c *Client) LoadDetail(path string) (backend.Detailer, error) {
 	return c.Backend.LoadDetail(path)
 }
 
@@ -121,7 +121,7 @@ func (c *Client) List(prefix string) ([]string, error) {
 // beginning with prefix.  An empty array is not considered an error.
 //
 // This operation may be slow for any backend returning paged results!
-func (c *Client) ListDetail(prefix string) ([]interf.Detailer, error) {
+func (c *Client) ListDetail(prefix string) ([]backend.Detailer, error) {
 	return c.Backend.ListDetail(prefix)
 }
 
@@ -141,7 +141,14 @@ func (c *Client) CountAll() (int, error) {
 // Shutdown calls Backend.Shutdown, which should perform any shutdown
 // operations such as purging expired items from the pool; and then calls
 // ExitFunc with the provided exit code.
+//
+// If Backend.Shutdown returns an error, 99 is used instead of code.
 func (c *Client) Shutdown(code int) {
-	c.Backend.Shutdown()
+	// TODO: logging...
+	err := c.Backend.Shutdown()
+	if err != nil {
+		// TODO: log this bit for sure... and maybe package var for the 99.
+		code = 99
+	}
 	ExitFunc(code)
 }

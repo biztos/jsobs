@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/biztos/jsobs"
-	"github.com/biztos/jsobs/interf"
+	"github.com/biztos/jsobs/backend"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -61,8 +61,8 @@ type TestBackend struct {
 	nextError     error
 	nextCount     int
 	nextPaths     []string
-	nextDetailer  interf.Detailer
-	nextDetailers []interf.Detailer
+	nextDetailer  backend.Detailer
+	nextDetailers []backend.Detailer
 	nextData      []byte
 }
 
@@ -94,7 +94,7 @@ func (t *TestBackend) LoadRaw(path string) ([]byte, error) {
 	return t.nextData, t.nextError
 
 }
-func (t *TestBackend) LoadDetail(path string) (interf.Detailer, error) {
+func (t *TestBackend) LoadDetail(path string) (backend.Detailer, error) {
 	t.addCall("LoadDetail")
 	t.lastPath = path
 	return t.nextDetailer, t.nextError
@@ -112,7 +112,7 @@ func (t *TestBackend) List(prefix string) ([]string, error) {
 	return t.nextPaths, t.nextError
 
 }
-func (t *TestBackend) ListDetail(prefix string) ([]interf.Detailer, error) {
+func (t *TestBackend) ListDetail(prefix string) ([]backend.Detailer, error) {
 	t.addCall("ListDetail")
 	t.lastPrefix = prefix
 	return t.nextDetailers, t.nextError
@@ -129,8 +129,9 @@ func (t *TestBackend) CountAll() (int, error) {
 	return t.nextCount, t.nextError
 
 }
-func (t *TestBackend) Shutdown() {
+func (t *TestBackend) Shutdown() error {
 	t.addCall("Shutdown")
+	return t.nextError
 }
 
 type JsobsTestSuite struct {

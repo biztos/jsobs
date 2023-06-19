@@ -20,7 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/biztos/jsobs/interf"
+	"github.com/biztos/jsobs/backend"
 )
 
 // Override if using multiple databases in your process.
@@ -30,9 +30,7 @@ var DefaultTable = "obj_store"
 
 var ErrNotFound = pgx.ErrNoRows
 
-var PurgePollInterval = time.Millisecond
-
-// PgDetailer implements interf.Detailer to describe an object.
+// PgDetailer implements backend.Detailer to describe an object.
 type PgDetailer struct {
 	path     string
 	size     int
@@ -52,22 +50,22 @@ func (d *PgDetailer) Scan(row pgx.Row) error {
 	)
 }
 
-// Path implements interf.Detailer.
+// Path implements backend.Detailer.
 func (d *PgDetailer) Path() string {
 	return d.path
 }
 
-// Size implements interf.Detailer.
+// Size implements backend.Detailer.
 func (d *PgDetailer) Size() int {
 	return d.size
 }
 
-// Expires implements interf.Detailer.
+// Expires implements backend.Detailer.
 func (d *PgDetailer) Expires() bool {
 	return d.expiry != nil
 }
 
-// Expiry implements interf.Detailer. If Expires returns false then Expiry must
+// Expiry implements backend.Detailer. If Expires returns false then Expiry must
 // be ignored.
 func (d *PgDetailer) Expiry() time.Time {
 	if d.expiry == nil {
@@ -76,7 +74,7 @@ func (d *PgDetailer) Expiry() time.Time {
 	return *d.expiry
 }
 
-// Modified implements interf.Detailer.
+// Modified implements backend.Detailer.
 func (d *PgDetailer) Modified() time.Time {
 	return d.modified
 }
@@ -86,17 +84,11 @@ type PgClient struct {
 	Pool            *pgxpool.Pool
 	Table           string
 	PurgeOnShutdown bool
-	purging         bool
 }
 
 // String returns an identifying string.
 func (c *PgClient) String() string {
 	return fmt.Sprintf("pgclient (table=%s)", c.Table)
-}
-
-// Purging returns true if Purge is actively processing a purge.
-func (c *PgClient) Purging() bool {
-	return c.purging
 }
 
 // New returns a new PgClient using DefaultTable and a pool from
@@ -151,7 +143,7 @@ func (c *PgClient) LoadRaw(path string) ([]byte, error) {
 // LoadDetail retrieves the details of the object at path and returns its
 // a jsobs.Detailer.
 // If the object does not exist, the error returned will be ErrNotFound.
-func (c *PgClient) LoadDetail(path string) (interf.Detailer, error) {
+func (c *PgClient) LoadDetail(path string) (backend.Detailer, error) {
 
 	row := c.Pool.QueryRow(context.Background(), c.loadDetailSql(), path)
 	detail := &PgDetailer{}
@@ -198,7 +190,7 @@ func (c *PgClient) List(prefix string) ([]string, error) {
 // beginning with prefix.  An empty array is not considered an error.
 //
 // For S3, this operation may be slow if paged results are returned!
-func (c *PgClient) ListDetail(prefix string) ([]interf.Detailer, error) {
+func (c *PgClient) ListDetail(prefix string) ([]backend.Detailer, error) {
 
 	// NOTE: using starts_with so don't need to %-ify prefix.
 
@@ -206,12 +198,12 @@ func (c *PgClient) ListDetail(prefix string) ([]interf.Detailer, error) {
 	// folks won't let os call an O(n) function, instead we have to roll our
 	// own O(n) operation, yay:
 	//
-	// https://dusted.codes/using-go-generics-to-pass-struct-slices-for-interface-slices
+	// https://dusted.codes/using-go-generics-to-pass-struct-slices-for-backendace-slices
 	//
 	// However, lucky us, CollectRows takes care of it!
 	rows, _ := c.Pool.Query(context.Background(), c.listDetailSql(), prefix)
 	detailers, err := pgx.CollectRows(rows,
-		func(row pgx.CollectableRow) (interf.Detailer, error) {
+		func(row pgx.CollectableRow) (backend.Detailer, error) {
 			d := &PgDetailer{}
 			err := d.Scan(row)
 			return d, err
@@ -246,12 +238,6 @@ func (c *PgClient) CountAll() (int, error) {
 // deleted.
 func (c *PgClient) Purge() (int, error) {
 
-	if c.purging == true {
-		return 0, errors.New("already purging")
-	}
-	c.purging = true
-
-	defer func() { c.purging = false }()
 	tag, err := c.Pool.Exec(context.Background(), c.purgeSql())
 
 	// NOTE: if you are purging more than two billion rows on a 32-bit system
@@ -274,17 +260,16 @@ func (c *PgClient) CreateTable() error {
 	return err
 }
 
-// Shutdown sleeps until Purging returns false, and also calls Purge if
-// PurgeOnShutdown is true.
+// Shutdown calls Purge if PurgeOnShutdown is true.
 //
 // Note that it *should* be safe to kill the client in mid-purge, but you
 // presumably want to purge at least once per run.
-func (c *PgClient) Shutdown() {
-	for c.Purging() == true {
-		time.Sleep(PurgePollInterval)
-	}
+func (c *PgClient) Shutdown() error {
 	if c.PurgeOnShutdown == true {
 		// TODO (maybe) -- log results.
-		c.Purge()
+		_, err := c.Purge()
+		return err
 	}
+	return nil
+
 }

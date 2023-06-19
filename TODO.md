@@ -1,23 +1,20 @@
-# jsobs TODO list
+# jsobs SPECULATIVE TODO list
 
-(more or less prioritized)
+## MAYBE logging!
 
-## Logging! Want some kind of debug logger we can easily integrate.
+Want some kind of debug logger we can easily integrate.
 
 Best idea right now is have an interface that just happens to match the
 logger of choice, and a default implementation that just uses logging to
 keep it simple.  Then pass the nicer logger in at construction in other code.
-At the client level.
+At the `jsobs.Client` level.
 
-## Better testing of pgclient purge wait
+**HOWEVER** it might be just as good to keep this API simpler and let the
+caller do the logging if they want.  Or split the difference and have the
+backend log verbosely at debug? Meh in that case I want "debug" versus
+"superdebug" with the latter showing SQL...
 
-Actually have a simple solution:
-
-- create one rec to purge
-- lock it for update
-- go unlock it after sleep N
-- go purge
-- wait for not purging, will be > N
+OK no logging for now.
 
 ## Continuous purge for pgclient via timer... MAYBE!
 

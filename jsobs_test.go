@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/biztos/jsobs"
-	"github.com/biztos/jsobs/interf"
+	"github.com/biztos/jsobs/backend"
 	"github.com/biztos/jsobs/pgclient"
 )
 
@@ -88,6 +88,20 @@ func (suite *JsobsTestSuite) TestShutdownOK() {
 
 }
 
+func (suite *JsobsTestSuite) TestShutdownWithBackendErrorOK() {
+
+	require := suite.Require()
+
+	suite.Backend.nextError = errors.New("backend fail")
+
+	code := 3
+	suite.Client.Shutdown(code)
+	require.EqualValues([]string{"Shutdown"}, suite.Backend.allCalls, "calls")
+	require.True(suite.Exited)
+	require.Equal(99, suite.ExitCode)
+
+}
+
 func (suite *JsobsTestSuite) TestListDetailError() {
 
 	require := suite.Require()
@@ -106,7 +120,7 @@ func (suite *JsobsTestSuite) TestListDetailOK() {
 
 	require := suite.Require()
 
-	exp_detailers := []interf.Detailer{
+	exp_detailers := []backend.Detailer{
 		&TestDetailer{path: "/foo"},
 		&TestDetailer{path: "/bar"},
 	}

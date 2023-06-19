@@ -1,10 +1,10 @@
-// interf/interfaces.go -- just the interfaces!
+// backend/interfaces.go -- just the interfaces!
 //
 // Here to avoid circular dependencies between jsobs and the backends, both
 // of which need to know about these interfaces.
 
 // Package interf defines the independent interfaces used by jsobs.
-package interf
+package backend
 
 import (
 	"time"
@@ -32,5 +32,5 @@ type BackendClient interface {
 	ListDetail(prefix string) ([]Detailer, error)
 	Count(prefix string) (int, error)
 	CountAll() (int, error)
-	Shutdown()
+	Shutdown() error
 }
