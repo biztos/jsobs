@@ -1,5 +1,15 @@
 # jsobs - Javascript Object Store
 
+[![GoDoc][b1]][doc] [![Report Card][b2]][rpt] [![Coverage Status][b3]][cov]
+
+
+[b1]: https://pkg.go.dev/badge/github.com/biztos/jsobs
+[doc]: https://pkg.go.dev/github.com/biztos/jsobs
+[b2]: https://goreportcard.com/badge/github.com/biztos/jsobs
+[rpt]: https://goreportcard.com/report/github.com/biztos/jsobs
+[b3]: https://coveralls.io/repos/github/biztos/jsobs/badge.svg
+[cov]: https://coveralls.io/github/biztos/jsobs
+
 JSOBS (pronounced "jay-sobs") is simple object storage for JSON-encodable
 objects in a PostgreSQL database.
 

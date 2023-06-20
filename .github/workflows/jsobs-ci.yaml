@@ -1,5 +1,3 @@
-# TODO:
-# - badge via local (pref) or coveralls, try on demo repo first.
 name: JSOBS CI
 on: push
 
@@ -59,9 +57,14 @@ jobs:
       - name: Generate HTML coverage report
         run: go tool cover -html=cover.out -o=cover.html
 
-      - name: Upload Go coverage report
+      - name: Upload Go coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
           name: Go-coverage-report
           path: cover.html
 
+      - name: Send coverage report to Coveralls.io
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: cover.out
+# END
