@@ -52,7 +52,7 @@ There is no support for complex metadata at this time. Maybe later? Maybe not.
 
 ### Purge On Shutdown
 
-Currently the only time data is purges is when Shutdown is called.  This may
+Currently the only time data is purged is when Shutdown is called.  This may
 be problematic for your use case!
 
 One solution is to just call `Backend.Purge()` at your leisure.  Another,

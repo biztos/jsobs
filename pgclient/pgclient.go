@@ -111,6 +111,16 @@ func New() (*PgClient, error) {
 	return client, nil
 }
 
+// NewForPool returns a new PgClient with the provided Pool, with defaults
+// as in New.
+func NewForPool(pool *pgxpool.Pool) *PgClient {
+	return &PgClient{
+		Pool:            pool,
+		Table:           DefaultTable,
+		PurgeOnShutdown: true,
+	}
+}
+
 // SaveRaw saves the raw_obj to the database with no expiry.
 func (c *PgClient) SaveRaw(path string, raw_obj []byte) error {
 

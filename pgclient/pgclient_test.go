@@ -74,6 +74,19 @@ func (suite *PgClientTestSuite) TestNewUsesAltEnvOK() {
 
 }
 
+func (suite *PgClientTestSuite) TestNewForPoolOK() {
+
+	require := suite.Require()
+
+	c, err := pgclient.New()
+	require.NoError(err, "connect error")
+
+	c2 := pgclient.NewForPool(c.Pool)
+	require.Equal(c.Pool, c2.Pool)
+	require.Equal(c.Table, c2.Table)
+	require.True(c2.PurgeOnShutdown)
+}
+
 func (suite *PgClientTestSuite) TestStringOK() {
 
 	require := suite.Require()
